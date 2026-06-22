@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>InfoRadar - 个人情报雷达</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; }
+        .container { max-width: 900px; margin: 0 auto; padding: 2rem; }
+        h1 { font-size: 1.8rem; margin-bottom: 0.5rem; color: #38bdf8; }
+        .subtitle { color: #94a3b8; margin-bottom: 2rem; }
+        .add-topic { display: flex; gap: 0.5rem; margin-bottom: 2rem; }
+        .add-topic input, .add-topic select { padding: 0.6rem 1rem; border: 1px solid #334155; border-radius: 8px; background: #1e293b; color: #e2e8f0; font-size: 0.9rem; }
+        .add-topic input { flex: 1; }
+        .add-topic button { padding: 0.6rem 1.2rem; border: none; border-radius: 8px; background: #2563eb; color: white; cursor: pointer; font-weight: 600; }
+        .add-topic button:hover { background: #1d4ed8; }
+        .topic-card { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 1.2rem; margin-bottom: 1rem; }
+        .topic-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.8rem; }
+        .topic-name { font-size: 1.1rem; font-weight: 600; color: #f1f5f9; }
+        .topic-meta { color: #94a3b8; font-size: 0.85rem; }
+        .topic-actions { display: flex; gap: 0.5rem; }
+        .btn { padding: 0.4rem 0.8rem; border: none; border-radius: 6px; cursor: pointer; font-size: 0.8rem; }
+        .btn-scan { background: #059669; color: white; }
+        .btn-scan:hover { background: #047857; }
+        .btn-del { background: #dc2626; color: white; }
+        .btn-del:hover { background: #b91c1c; }
+        .btn-digest { background: #7c3aed; color: white; }
+        .btn-digest:hover { background: #6d28d9; }
+        .status { padding: 0.5rem 0.8rem; border-radius: 6px; margin-top: 0.5rem; font-size: 0.85rem; }
+        .status-running { background: #1e3a5f; color: #7dd3fc; }
+        .status-done { background: #064e3b; color: #6ee7b7; }
+        .status-error { background: #7f1d1d; color: #fca5a5; }
+        .digest-content { background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 1rem; margin-top: 0.8rem; font-size: 0.9rem; line-height: 1.6; white-space: pre-wrap; max-height: 400px; overflow-y: auto; }
+        .digest-list { margin-top: 1rem; }
+        .digest-item { background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 0.8rem; margin-bottom: 0.5rem; }
+        .digest-time { color: #94a3b8; font-size: 0.8rem; margin-bottom: 0.3rem; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>InfoRadar</h1>
+        <p class="subtitle">个人情报雷达 — 自动追踪你关心的话题</p>
+        <div class="add-topic">
+            <input id="topicName" type="text" placeholder="输入话题名称，如：上海Agent实习">
+            <select id="scanInterval">
+                <option value="6">每6小时</option>
+                <option value="12">每12小时</option>
+                <option value="24" selected>每天</option>
+                <option value="168">每周</option>
+            </select>
+            <button onclick="addTopic()">添加话题</button>
+        </div>
+        <div id="topicsList"></div>
+        <div id="digestsPanel" style="display:none">
+            <h2 style="color:#38bdf8;margin:1.5rem 0 1rem" id="digestTitle"></h2>
+            <div id="digestsList" class="digest-list"></div>
+        </div>
+    </div>
+    <script>
+        const API = '';
+        async function loadTopics() {
+            const res = await fetch(`${API}/api/topics`);
+            const topics = await res.json();
+            document.getElementById('topicsList').innerHTML = topics.map(t => `
+                <div class="topic-card" id="topic-${t.id}">
+                    <div class="topic-header">
+                        <div>
+                            <div class="topic-name">${t.name}</div>
+                            <div class="topic-meta">扫描频率: 每${t.scan_interval_hours}小时</div>
+                        </div>
+                        <div class="topic-actions">
+                            <button class="btn btn-scan" onclick="scanTopic(${t.id})">扫描</button>
+                            <button class="btn btn-digest" onclick="showDigests(${t.id}, '${t.name}')">历史摘要</button>
+                            <button class="btn btn-del" onclick="deleteTopic(${t.id})">删除</button>
+                        </div>
+                    </div>
+                    <div id="status-${t.id}"></div>
+                    <div id="result-${t.id}"></div>
+                </div>
+            `).join('');
+        }
+        async function addTopic() {
+            const name = document.getElementById('topicName').value.trim();
+            const interval = parseInt(document.getElementById('scanInterval').value);
+            if (!name) return alert('请输入话题名称');
+            await fetch(`${API}/api/topics`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({name, scan_interval_hours: interval}),
+            });
+            document.getElementById('topicName').value = '';
+            loadTopics();
+        }
+        async function deleteTopic(id) {
+            if (!confirm('确定删除？')) return;
+            await fetch(`${API}/api/topics/${id}`, {method: 'DELETE'});
+            loadTopics();
+        }
+        async function scanTopic(id) {
+            const statusEl = document.getElementById(`status-${id}`);
+            const resultEl = document.getElementById(`result-${id}`);
+            statusEl.innerHTML = '<div class="status status-running">正在扫描...</div>';
+            resultEl.innerHTML = '';
+            const evtSource = new EventSource(`${API}/api/scans/${id}/stream`);
+            evtSource.addEventListener('progress', (e) => {
+                const data = JSON.parse(e.data);
+                statusEl.innerHTML = `<div class="status status-running">${data.message}</div>`;
+            });
+            evtSource.addEventListener('complete', (e) => {
+                evtSource.close();
+                const data = JSON.parse(e.data);
+                statusEl.innerHTML = `<div class="status status-done">扫描完成：新增 ${data.new_entries} 条</div>`;
+                resultEl.innerHTML = `<div class="digest-content">${data.digest}</div>`;
+            });
+            evtSource.addEventListener('error', (e) => {
+                evtSource.close();
+                const data = JSON.parse(e.data);
+                statusEl.innerHTML = `<div class="status status-error">扫描失败: ${data.error}</div>`;
+            });
+        }
+        async function showDigests(id, name) {
+            const panel = document.getElementById('digestsPanel');
+            document.getElementById('digestTitle').textContent = `${name} - 历史摘要`;
+            panel.style.display = 'block';
+            const res = await fetch(`${API}/api/digests/${id}?limit=10`);
+            const digests = await res.json();
+            document.getElementById('digestsList').innerHTML = digests.map(d => `
+                <div class="digest-item">
+                    <div class="digest-time">${d.created_at}</div>
+                    <div class="digest-content">${d.content}</div>
+                </div>
+            `).join('') || '<p style="color:#94a3b8">暂无历史摘要</p>';
+        }
+        loadTopics();
+    </script>
+</body>
+</html>
