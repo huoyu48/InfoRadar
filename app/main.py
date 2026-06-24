@@ -6,6 +6,7 @@ from pathlib import Path
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from sse_starlette.sse import EventSourceResponse
 
@@ -25,6 +26,14 @@ settings = get_settings()
 
 # ── FastAPI 应用 ──
 app = FastAPI(title="InfoRadar", version="1.0.0")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173", "http://localhost:3000", "http://localhost:8001"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 static_dir = Path(__file__).parent / "static"
 static_dir.mkdir(exist_ok=True)
@@ -164,6 +173,23 @@ def get_digests(topic_id: int, limit: int = 10):
     ).fetchall()
     conn.close()
     return [dict(row) for row in rows]
+
+
+# ── 统计 API ──
+
+@app.get("/api/stats")
+def get_stats():
+    """返回系统统计信息"""
+    conn = get_db()
+    total_topics = conn.execute("SELECT COUNT(*) FROM topics").fetchone()[0]
+    total_findings = conn.execute("SELECT COUNT(*) FROM findings").fetchone()[0]
+    total_digests = conn.execute("SELECT COUNT(*) FROM digests").fetchone()[0]
+    conn.close()
+    return {
+        "total_topics": total_topics,
+        "total_findings": total_findings,
+        "total_digests": total_digests,
+    }
 
 
 # ── 首页 ──
