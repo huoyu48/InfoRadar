@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { Loader2, CheckCircle2, Circle } from 'lucide-react'
+import ReactMarkdown from 'react-markdown'
 import { scanStream } from '../api.js'
 
 const STAGES = [
@@ -77,8 +78,10 @@ export default function ScanPanel({ topicId }) {
           <p className="text-sm text-text-secondary mb-2">
             新增 {result.new_entries} 条信息
           </p>
-          <div className="bg-bg rounded-lg p-4 text-sm whitespace-pre-wrap max-h-80 overflow-y-auto">
-            {result.digest}
+          <div className="bg-bg rounded-lg p-4 max-h-80 overflow-y-auto">
+            <div className="prose prose-sm max-w-none">
+              <ReactMarkdown>{result.digest}</ReactMarkdown>
+            </div>
           </div>
         </div>
       )}

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { ChevronDown, ChevronRight, FileText } from 'lucide-react'
+import ReactMarkdown from 'react-markdown'
 
 export default function DigestList({ digests }) {
   const [expandedId, setExpandedId] = useState(null)
@@ -32,8 +33,10 @@ export default function DigestList({ digests }) {
               }
             </button>
             {isExpanded && (
-              <div className="px-4 pb-4 text-sm whitespace-pre-wrap border-t border-border pt-3">
-                {d.content}
+              <div className="px-4 pb-4 border-t border-border pt-3">
+                <div className="prose prose-sm max-w-none">
+                  <ReactMarkdown>{d.content}</ReactMarkdown>
+                </div>
               </div>
             )}
           </div>
