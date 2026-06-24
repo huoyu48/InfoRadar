@@ -46,11 +46,12 @@ class TopicCreate(BaseModel):
 
 @app.post("/api/topics")
 def create_topic(req: TopicCreate):
+    from datetime import datetime
     conn = get_db()
     try:
         cursor = conn.execute(
-            "INSERT INTO topics (name, scan_interval_hours) VALUES (?, ?)",
-            (req.name, req.scan_interval_hours),
+            "INSERT INTO topics (name, scan_interval_hours, created_at) VALUES (?, ?, ?)",
+            (req.name, req.scan_interval_hours, datetime.now().isoformat()),
         )
         conn.commit()
         topic_id = cursor.lastrowid

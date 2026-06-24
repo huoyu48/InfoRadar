@@ -34,14 +34,12 @@ def get_chroma() -> chromadb.ClientAPI:  # type: ignore
 
 
 def get_db() -> sqlite3.Connection:
-    global _db
-    if _db is None:
-        settings = get_settings()
-        import os
-        os.makedirs(os.path.dirname(settings.sqlite_path), exist_ok=True)
-        _db = sqlite3.connect(settings.sqlite_path)
-        _db.row_factory = sqlite3.Row
-    return _db
+    settings = get_settings()
+    import os
+    os.makedirs(os.path.dirname(settings.sqlite_path), exist_ok=True)
+    conn = sqlite3.connect(settings.sqlite_path, check_same_thread=False)
+    conn.row_factory = sqlite3.Row
+    return conn
 
 
 # ── 数据库初始化 ──
