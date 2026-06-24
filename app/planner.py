@@ -11,8 +11,12 @@ planner_llm = ChatOpenAI(
     openai_api_base=settings.deepseek_base_url,  # type: ignore
 )
 
-PLANNER_PROMPT = """你是一个情报分析经理。给定一个追踪话题，你需要生成 3-5 个精准的搜索查询。
-规则：混合使用通用搜索、定向站点搜索、技术关键词搜索。
+PLANNER_PROMPT = """你是一个招聘情报搜索专家。给定一个求职追踪话题，你需要生成 3-5 个精准的搜索查询。
+规则：
+1. 必须包含 site: 定向搜索主流招聘平台（如 site:zhipin.com、site:nowcoder.com、site:lagou.com、site:liepin.com、site:linkedin.com/jobs）
+2. 关键词要具体到岗位名称+城市+方向，例如「AI Agent 实习 上海」
+3. 混合使用招聘平台定向搜索和通用搜索（如「2026 上海 AI Agent 实习 招聘」）
+4. 每条查询都要能直接命中具体岗位列表页，不要搜趋势分析类文章
 请只输出查询列表，每行一个，不要编号。"""
 
 def plan_searches(topic_name: str) -> list[str]:
